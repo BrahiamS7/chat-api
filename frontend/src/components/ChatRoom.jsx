@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createSocket } from '../lib/socket.js'
 
+const ETIQUETAS_ESTADO = {
+  desconectado: 'Desconectado',
+  conectando: 'Conectando…',
+  conectado: 'En línea',
+  error: 'Sin señal'
+}
+
 function formatoHora(iso) {
   const fecha = new Date(iso)
   return fecha.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
@@ -75,7 +82,10 @@ export default function ChatRoom({ sesion, onSalir }) {
       <aside className="chat-sidebar">
         <div className="brand">
           <span className="brand-mark">CANAL</span>
-          <span className={`status-pill status-${estado}`}>{estado}</span>
+          <span className={`led-status led-status-${estado}`} title={ETIQUETAS_ESTADO[estado]}>
+            <span className="led" />
+            <span className="led-label">{ETIQUETAS_ESTADO[estado]}</span>
+          </span>
         </div>
 
         <form onSubmit={unirseASala} className="room-form">
@@ -102,7 +112,7 @@ export default function ChatRoom({ sesion, onSalir }) {
         <header className="room-header">
           {salaActual ? (
             <>
-              <span className="room-flap">{salaActual}</span>
+              <span className="room-flap" key={`flap-${salaActual}`}>{salaActual}</span>
               <span className="room-caption">transmisión en vivo</span>
             </>
           ) : (
@@ -110,7 +120,14 @@ export default function ChatRoom({ sesion, onSalir }) {
           )}
         </header>
 
-        <div className="log" ref={logRef}>
+        {estado === 'error' && (
+          <div className="banner-error" role="alert">
+            No se pudo conectar con el servidor de chat. Tu sesión pudo expirar —
+            probá salir y volver a entrar.
+          </div>
+        )}
+
+        <div className="log" ref={logRef} key={salaActual || 'sin-sala'}>
           {avisos.map((a, i) => (
             <div key={`aviso-${i}`} className="log-system">{a}</div>
           ))}
@@ -127,7 +144,7 @@ export default function ChatRoom({ sesion, onSalir }) {
           ))}
 
           {salaActual && mensajes.length === 0 && avisos.length === 0 && (
-            <div className="log-empty">Todavía no hay mensajes en esta sala. Escribí el primero.</div>
+            <div className="log-empty">Ninguna transmisión todavía en esta sala. Escribí el primer mensaje.</div>
           )}
         </div>
 

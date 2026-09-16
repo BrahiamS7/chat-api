@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { decodeJwtPayload } from '../lib/jwt.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -9,6 +10,21 @@ export default function AuthForm({ onAuth }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [servidor, setServidor] = useState('buscando') // buscando | online | offline
+
+  useEffect(() => {
+    let vigente = true
+    fetch(API_URL)
+      .then((res) => {
+        if (vigente) setServidor(res.ok ? 'online' : 'offline')
+      })
+      .catch(() => {
+        if (vigente) setServidor('offline')
+      })
+    return () => {
+      vigente = false
+    }
+  }, [])
 
   async function manejarEnvio(e) {
     e.preventDefault()
@@ -31,7 +47,8 @@ export default function AuthForm({ onAuth }) {
         throw new Error(data.error || 'No se pudo completar la solicitud')
       }
 
-      onAuth({ token: data.token, nombre: nombre || email })
+      const payload = decodeJwtPayload(data.token)
+      onAuth({ token: data.token, nombre: payload?.nombre || email })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -42,13 +59,26 @@ export default function AuthForm({ onAuth }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="auth-signal" aria-hidden="true">
-          <span className="dot" />
-          <span className="signal-text">SEÑAL ACTIVA</span>
+        <div className="dial" aria-hidden="true">
+          <div className="dial-ticks">
+            {Array.from({ length: 25 }).map((_, i) => (
+              <span key={i} className={i % 6 === 0 ? 'tick tick-major' : 'tick'} />
+            ))}
+          </div>
+          <div className="dial-needle" />
         </div>
 
         <h1 className="auth-title">CANAL</h1>
-        <p className="auth-subtitle">Mensajería en vivo, por salas.</p>
+        <p className="auth-subtitle">Sintoniza una sala y habla en vivo.</p>
+
+        <div className={`server-readout server-${servidor}`}>
+          <span className="led" />
+          <span>
+            {servidor === 'buscando' && 'Buscando el servidor…'}
+            {servidor === 'online' && 'Servidor en línea'}
+            {servidor === 'offline' && 'Sin conexión con el servidor'}
+          </span>
+        </div>
 
         <div className="auth-tabs" role="tablist">
           <button
@@ -104,7 +134,7 @@ export default function AuthForm({ onAuth }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={modo === 'login' ? 'current-password' : 'new-password'}
-              minLength={4}
+              minLength={modo === 'login' ? undefined : 8}
             />
           </label>
 
