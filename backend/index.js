@@ -1,37 +1,16 @@
 import 'dotenv/config';
-import cors from 'cors';
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import authRoutes from './routes/auth.routes.js';
-import { socketAuthMiddleware } from './middlewares/socket.middleware.js';
-import { registrarEventosChat } from './controllers/chat.controller.js';
+import crearServidor from './server.js';
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: { origin: '*' }
-});
+const variablesRequeridas = ['DATABASE_URL', 'JWT_SECRET'];
+const faltantes = variablesRequeridas.filter((v) => !process.env[v]);
+if (faltantes.length > 0) {
+  console.error(`Faltan variables de entorno requeridas: ${faltantes.join(', ')}`);
+  process.exit(1);
+}
 
+const { httpServer } = crearServidor();
+const port = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: '*',
-}));
-app.use(express.json());
-app.use('/auth', authRoutes);
-
-app.get('/', (req, res) => {
-  res.status(200).json({ msg: "API DE CHAT FUNCIONANDO" });
-});
-
-io.use(socketAuthMiddleware);
-
-io.on('connection', (socket) => {
-  console.log(`Conectado: ${socket.usuario.nombre}`);
-  registrarEventosChat(io, socket);
-});
-
-const port = 3000;
 httpServer.listen(port, () => {
   console.log(`SERVER RUNNING ON PORT ${port}`);
 });

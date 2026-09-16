@@ -37,3 +37,10 @@ model Usuario {
   password String
   mensajes Mensaje[]
 }
+
+model TokenRevocado {
+  id       Int      @id @default(autoincrement())
+  jti      String   @unique
+  expiraEn DateTime
+  creadoEn DateTime @default(now())
+}
